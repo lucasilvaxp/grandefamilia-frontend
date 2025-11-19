@@ -30,25 +30,25 @@ export function ImageUpload({ images, onImagesChange, maxImages = 10 }: ImageUpl
     setUploading(true);
 
     try {
-      const uploadPromises = files.map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Erro ao fazer upload');
-        }
-
-        const data = await response.json();
-        return data.url;
+      // Create FormData with correct field name
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('images', file); // Changed from 'file' to 'images'
       });
 
-      const uploadedUrls = await Promise.all(uploadPromises);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao fazer upload');
+      }
+
+      const data = await response.json();
+      // Backend returns { urls: [...] }
+      const uploadedUrls = data.urls || [];
       onImagesChange([...images, ...uploadedUrls]);
       toast.success(`${uploadedUrls.length} imagem(ns) enviada(s) com sucesso!`);
     } catch (error) {
