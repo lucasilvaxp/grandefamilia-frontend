@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Loader2, LogOut, Home } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, LogOut, Home, Settings, Package, Tag, TrendingUp } from 'lucide-react';
 import { ProductFormDialog } from '@/components/ProductFormDialog';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -45,7 +45,6 @@ export default function AdminPage() {
   const { isAuthenticated, logout, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
-    // Redirect to login if not authenticated
     if (!authLoading && !isAuthenticated) {
       router.push('/admin/login');
     }
@@ -132,6 +131,11 @@ export default function AdminPage() {
     fetchData();
   };
 
+  // Calculate statistics
+  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+  const lowStockProducts = products.filter(p => p.stock < 10).length;
+  const uniqueBrands = new Set(products.map(p => p.brand)).size;
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -149,7 +153,7 @@ export default function AdminPage() {
       <Header />
 
       <main className="container py-8 flex-1">
-        {/* Admin Header with Logo */}
+        {/* Admin Header */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16">
@@ -164,7 +168,7 @@ export default function AdminPage() {
             <div>
               <h1 className="text-4xl font-bold mb-2">Painel Administrativo</h1>
               <p className="text-muted-foreground">
-                Gerencie produtos e categorias do catálogo
+                Gerencie produtos, categorias e configurações do catálogo
               </p>
             </div>
           </div>
@@ -172,7 +176,13 @@ export default function AdminPage() {
             <Link href="/">
               <Button variant="outline" size="lg">
                 <Home className="h-5 w-5 mr-2" />
-                Voltar para a Página Principal
+                Página Principal
+              </Button>
+            </Link>
+            <Link href="/admin/configuracoes">
+              <Button variant="outline" size="lg">
+                <Settings className="h-5 w-5 mr-2" />
+                Configurações
               </Button>
             </Link>
             <Button onClick={handleCreate} size="lg">
@@ -186,40 +196,65 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        {/* Enhanced Stats */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total de Produtos
               </CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{products.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {products.filter(p => p.featured).length} em destaque
+              </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Categorias
               </CardTitle>
+              <Tag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{categories.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {uniqueBrands} marcas diferentes
+              </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Produtos em Destaque
+                Valor em Estoque
               </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
-                {products.filter(p => p.featured).length}
-              </div>
+              <div className="text-3xl font-bold">R$ {totalValue.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total do inventário
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Estoque Baixo
+              </CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{lowStockProducts}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Produtos com menos de 10 unidades
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -273,7 +308,11 @@ export default function AdminPage() {
                         <TableCell>{product.category}</TableCell>
                         <TableCell>{product.brand}</TableCell>
                         <TableCell>R$ {product.price.toFixed(2)}</TableCell>
-                        <TableCell>{product.stock}</TableCell>
+                        <TableCell>
+                          <span className={product.stock < 10 ? 'text-destructive font-semibold' : ''}>
+                            {product.stock}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             {product.featured && (
@@ -281,6 +320,9 @@ export default function AdminPage() {
                             )}
                             {product.stock === 0 && (
                               <Badge variant="destructive">Esgotado</Badge>
+                            )}
+                            {product.stock > 0 && product.stock < 10 && (
+                              <Badge variant="outline" className="text-yellow-600">Baixo</Badge>
                             )}
                           </div>
                         </TableCell>
