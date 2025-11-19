@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FASTAPI_BASE_URL } from '@/lib/api-config';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,31 +33,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward to FastAPI backend
-    const backendFormData = new FormData();
-    backendFormData.append('file', file);
-
-    const response = await fetch(`${FASTAPI_BASE_URL}/api/upload`, {
-      method: 'POST',
-      body: backendFormData,
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      return NextResponse.json(
-        { error: error.detail || 'Erro ao fazer upload' },
-        { status: response.status }
-      );
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = join(process.cwd(), 'public', 'uploads');
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
     }
 
-    const data = await response.json();
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const extension = file.name.split('.').pop();
+    const filename = `${timestamp}-${randomString}.${extension}`;
+
+    // Convert file to buffer and save
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const filepath = join(uploadsDir, filename);
     
-    // Convert relative URL to absolute URL using backend base URL
-    const absoluteUrl = data.url.startsWith('http') 
-      ? data.url 
-      : `${FASTAPI_BASE_URL}${data.url}`;
+    await writeFile(filepath, buffer);
+
+    // Return public URL
+    const publicUrl = `/uploads/${filename}`;
     
-    return NextResponse.json({ url: absoluteUrl });
+    return NextResponse.json({ url: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(

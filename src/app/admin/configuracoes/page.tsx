@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { CategoryManager } from '@/components/admin/CategoryManager';
 import { BrandManager } from '@/components/admin/BrandManager';
+import { StoreSettingsManager } from '@/components/admin/StoreSettingsManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ConfiguracoesPage() {
@@ -48,15 +49,20 @@ export default function ConfiguracoesPage() {
           </Link>
           <h1 className="text-4xl font-bold mb-2">Configurações</h1>
           <p className="text-muted-foreground">
-            Gerencie categorias, subcategorias e marcas da loja
+            Gerencie categorias, marcas e informações da loja
           </p>
         </div>
 
-        <Tabs defaultValue="categories" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+        <Tabs defaultValue="store" className="space-y-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsTrigger value="store">Loja</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="brands">Marcas</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="store">
+            <StoreSettingsManager />
+          </TabsContent>
 
           <TabsContent value="categories">
             <CategoryManager />
