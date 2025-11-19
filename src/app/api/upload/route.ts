@@ -1,65 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+
+const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const files = formData.getAll('images') as File[];
 
-    if (!file) {
+    if (!files || files.length === 0) {
       return NextResponse.json(
-        { error: 'Nenhum arquivo enviado' },
+        { error: 'Nenhuma imagem enviada' },
         { status: 400 }
       );
     }
 
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Tipo de arquivo inválido. Use JPEG, PNG ou WebP.' },
-        { status: 400 }
-      );
+    const uploadedUrls: string[] = [];
+
+    // Convert each file to base64 and send to FastAPI
+    for (const file of files) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        continue;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: `Arquivo ${file.name} excede 5MB` },
+          { status: 400 }
+        );
+      }
+
+      // Convert to base64
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const base64 = buffer.toString('base64');
+      const dataUrl = `data:${file.type};base64,${base64}`;
+
+      // Send to FastAPI backend
+      const response = await fetch(`${FASTAPI_URL}/api/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          content_type: file.type,
+          data: dataUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao fazer upload no backend');
+      }
+
+      const result = await response.json();
+      uploadedUrls.push(result.url);
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'Arquivo muito grande. Tamanho máximo: 5MB' },
-        { status: 400 }
-      );
-    }
-
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split('.').pop();
-    const filename = `${timestamp}-${randomString}.${extension}`;
-
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const filepath = join(uploadsDir, filename);
-    
-    await writeFile(filepath, buffer);
-
-    // Return public URL
-    const publicUrl = `/uploads/${filename}`;
-    
-    return NextResponse.json({ url: publicUrl });
+    return NextResponse.json({
+      urls: uploadedUrls,
+      message: `${uploadedUrls.length} imagem(ns) enviada(s) com sucesso!`,
+    });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro ao fazer upload' },
+      { error: 'Erro ao processar upload' },
       { status: 500 }
     );
   }
