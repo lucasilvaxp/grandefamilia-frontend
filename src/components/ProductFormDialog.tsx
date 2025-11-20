@@ -33,7 +33,7 @@ interface ProductFormDialogProps {
   onClose: () => void;
   product: Product | null;
   categories: Category[];
-  onSuccess: () => void;
+  onSuccess: (updatedProduct?: Product) => void;
 }
 
 export function ProductFormDialog({
@@ -149,8 +149,11 @@ export function ProductFormDialog({
       });
 
       if (response.ok) {
-        toast.success(product ? 'Produto atualizado!' : 'Produto criado!');
-        onSuccess();
+        const updatedProduct = await response.json();
+        toast.success(product ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!');
+        
+        // Pass the updated/created product back to parent
+        onSuccess(updatedProduct);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Erro ao salvar produto');
