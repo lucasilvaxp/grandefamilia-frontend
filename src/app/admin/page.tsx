@@ -60,7 +60,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
-        fetch('/api/products?pageSize=100'),
+        fetch('/api/products?pageSize=100&_t=' + Date.now()),
         fetch('/api/categories'),
       ]);
 
@@ -111,8 +111,14 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
+        // Optimistic update: remove from local state immediately
+        setProducts(prev => prev.filter(p => p._id !== productToDelete._id));
         toast.success('Produto excluído com sucesso');
-        fetchData();
+        
+        // Refresh data after a delay to sync with backend
+        setTimeout(() => {
+          fetchData();
+        }, 500);
       } else {
         toast.error('Erro ao excluir produto');
       }
@@ -125,10 +131,27 @@ export default function AdminPage() {
     }
   };
 
-  const handleFormSuccess = () => {
+  const handleFormSuccess = (updatedProduct?: Product) => {
     setFormOpen(false);
     setEditingProduct(null);
-    fetchData();
+    
+    if (updatedProduct) {
+      // Optimistic update: update local state immediately
+      if (editingProduct) {
+        // Update existing product
+        setProducts(prev => prev.map(p => 
+          p._id === updatedProduct._id ? updatedProduct : p
+        ));
+      } else {
+        // Add new product
+        setProducts(prev => [updatedProduct, ...prev]);
+      }
+    }
+    
+    // Refresh data after a delay to sync with backend
+    setTimeout(() => {
+      fetchData();
+    }, 500);
   };
 
   // Calculate statistics
@@ -138,7 +161,7 @@ export default function AdminPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -152,61 +175,69 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
-      <main className="container py-8 flex-1">
-        {/* Admin Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16">
-              <Image
-                src="/logo-grande-familia.png"
-                alt="Loja A Grande Família"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold mb-2">Painel Administrativo</h1>
-              <p className="text-muted-foreground">
-                Gerencie produtos, categorias e configurações do catálogo
-              </p>
+      <main className="container max-w-7xl mx-auto py-4 md:py-8 px-4 md:px-6 flex-1">
+        {/* Admin Header - Responsive */}
+        <div className="mb-6 md:mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="relative h-12 w-12 md:h-16 md:w-16 flex-shrink-0">
+                <Image
+                  src="/logo-grande-familia.png"
+                  alt="Loja A Grande Família"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2">Painel Administrativo</h1>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Gerencie produtos, categorias e configurações do catálogo
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Link href="/">
-              <Button variant="outline" size="lg">
-                <Home className="h-5 w-5 mr-2" />
-                Página Principal
+
+          {/* Action Buttons - Responsive Grid */}
+          <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
+            <Link href="/" className="w-full md:w-auto">
+              <Button variant="outline" className="w-full md:w-auto" size="default">
+                <Home className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Página Principal</span>
+                <span className="md:hidden">Home</span>
               </Button>
             </Link>
-            <Link href="/admin/configuracoes">
-              <Button variant="outline" size="lg">
-                <Settings className="h-5 w-5 mr-2" />
-                Configurações
+            <Link href="/admin/configuracoes" className="w-full md:w-auto">
+              <Button variant="outline" className="w-full md:w-auto" size="default">
+                <Settings className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Configurações</span>
+                <span className="md:hidden">Config</span>
               </Button>
             </Link>
-            <Button onClick={handleCreate} size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              Novo Produto
+            <Button onClick={handleCreate} className="w-full md:w-auto" size="default">
+              <Plus className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Novo Produto</span>
+              <span className="md:hidden">Novo</span>
             </Button>
-            <Button onClick={handleLogout} variant="outline" size="lg">
-              <LogOut className="h-5 w-5 mr-2" />
-              Sair
+            <Button onClick={handleLogout} variant="outline" className="w-full md:w-auto" size="default">
+              <LogOut className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Sair</span>
+              <span className="md:hidden">Sair</span>
             </Button>
           </div>
         </div>
 
-        {/* Enhanced Stats */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Grid - Responsive */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Total de Produtos
               </CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{products.length}</div>
+              <div className="text-xl md:text-3xl font-bold">{products.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {products.filter(p => p.featured).length} em destaque
               </p>
@@ -215,13 +246,13 @@ export default function AdminPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Categorias
               </CardTitle>
-              <Tag className="h-4 w-4 text-muted-foreground" />
+              <Tag className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{categories.length}</div>
+              <div className="text-xl md:text-3xl font-bold">{categories.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {uniqueBrands} marcas diferentes
               </p>
@@ -230,13 +261,13 @@ export default function AdminPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Valor em Estoque
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">R$ {totalValue.toFixed(2)}</div>
+              <div className="text-xl md:text-3xl font-bold">R$ {totalValue.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Total do inventário
               </p>
@@ -245,13 +276,13 @@ export default function AdminPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Estoque Baixo
               </CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{lowStockProducts}</div>
+              <div className="text-xl md:text-3xl font-bold">{lowStockProducts}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Produtos com menos de 10 unidades
               </p>
@@ -259,8 +290,8 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        {/* Products Table */}
-        <Card>
+        {/* Products Section */}
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Produtos</CardTitle>
           </CardHeader>
@@ -274,81 +305,149 @@ export default function AdminPage() {
                 Nenhum produto cadastrado
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px]">Imagem</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Preço</TableHead>
-                      <TableHead>Estoque</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map(product => (
-                      <TableRow key={product._id}>
-                        <TableCell>
-                          <div className="relative h-12 w-12 overflow-hidden rounded bg-gray-100">
-                            <Image
-                              src={product.images[0]}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                              sizes="48px"
-                            />
+              <>
+                {/* Desktop Table - Hidden on Mobile */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[80px]">Imagem</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Marca</TableHead>
+                        <TableHead>Preço</TableHead>
+                        <TableHead>Estoque</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map(product => (
+                        <TableRow key={product._id}>
+                          <TableCell>
+                            <div className="relative h-12 w-12 overflow-hidden rounded bg-gray-100">
+                              <Image
+                                src={product.images[0]}
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {product.name}
+                          </TableCell>
+                          <TableCell>{product.category}</TableCell>
+                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>R$ {product.price.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <span className={product.stock < 10 ? 'text-destructive font-semibold' : ''}>
+                              {product.stock}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {product.featured && (
+                                <Badge variant="secondary">Destaque</Badge>
+                              )}
+                              {product.stock === 0 && (
+                                <Badge variant="destructive">Esgotado</Badge>
+                              )}
+                              {product.stock > 0 && product.stock < 10 && (
+                                <Badge variant="outline" className="text-yellow-600">Baixo</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(product)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(product)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards - Hidden on Desktop */}
+                <div className="md:hidden space-y-4">
+                  {products.map(product => (
+                    <Card key={product._id} className="overflow-hidden">
+                      <div className="flex gap-4 p-4">
+                        {/* Image */}
+                        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded bg-gray-100">
+                          <Image
+                            src={product.images[0]}
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                            sizes="80px"
+                          />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm mb-1 truncate">{product.name}</h3>
+                          <div className="space-y-1 text-xs text-muted-foreground">
+                            <p>{product.category} • {product.brand}</p>
+                            <p className="font-bold text-foreground text-base">R$ {product.price.toFixed(2)}</p>
+                            <p>Estoque: <span className={product.stock < 10 ? 'text-destructive font-semibold' : ''}>{product.stock}</span></p>
                           </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {product.name}
-                        </TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>{product.brand}</TableCell>
-                        <TableCell>R$ {product.price.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <span className={product.stock < 10 ? 'text-destructive font-semibold' : ''}>
-                            {product.stock}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
+                          
+                          {/* Badges */}
+                          <div className="flex gap-1 mt-2 flex-wrap">
                             {product.featured && (
-                              <Badge variant="secondary">Destaque</Badge>
+                              <Badge variant="secondary" className="text-xs">Destaque</Badge>
                             )}
                             {product.stock === 0 && (
-                              <Badge variant="destructive">Esgotado</Badge>
+                              <Badge variant="destructive" className="text-xs">Esgotado</Badge>
                             )}
                             {product.stock > 0 && product.stock < 10 && (
-                              <Badge variant="outline" className="text-yellow-600">Baixo</Badge>
+                              <Badge variant="outline" className="text-yellow-600 text-xs">Baixo</Badge>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(product)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteClick(product)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 border-t p-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEdit(product)}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleDeleteClick(product)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Excluir
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
