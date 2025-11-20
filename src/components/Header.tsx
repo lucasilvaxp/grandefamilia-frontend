@@ -16,11 +16,11 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card backdrop-blur-xl supports-[backdrop-filter]:bg-card/95">
-        <div className="container px-4 md:px-6">
-          <div className="flex h-16 md:h-20 items-center justify-between gap-4">
-            {/* Logo - Larger and Better Spaced */}
+        <div className="container max-w-7xl mx-auto px-4 md:px-6">
+          <div className="flex h-14 md:h-16 items-center gap-4">
+            {/* Logo - Esquerda */}
             <Link href="/" className="flex items-center group flex-shrink-0">
-              <div className="relative h-12 w-12 md:h-16 md:w-16 transition-transform group-hover:scale-110">
+              <div className="relative h-10 w-10 md:h-12 md:w-12 transition-transform group-hover:scale-110">
                 <Image
                   src="/logo-grande-familia.png"
                   alt="Loja A Grande Família"
@@ -31,8 +31,8 @@ export function Header() {
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            {/* Desktop Navigation - Centralizada */}
+            <nav className="hidden md:flex flex-1 items-center justify-center gap-6">
               <Link
                 href="/"
                 className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
@@ -47,16 +47,16 @@ export function Header() {
               </Link>
             </nav>
 
-            {/* Right Side Actions - Better Spacing */}
-            <div className="flex items-center gap-2 md:gap-4">
+            {/* Right Side Actions - Direita */}
+            <div className="flex items-center gap-2 md:gap-3 md:flex-shrink-0">
               {/* Cart Button */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative hover:bg-primary/10 hover:text-primary h-10 w-10"
+                className="relative hover:bg-primary/10 hover:text-primary h-9 w-9"
                 onClick={() => setCartOpen(true)}
               >
-                <ShoppingCartIcon className="h-5 w-5" />
+                <ShoppingCartIcon className="h-4 w-4 md:h-5 md:w-5" />
                 {itemCount > 0 && (
                   <span className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center font-bold shadow-lg">
                     {itemCount}
@@ -68,21 +68,21 @@ export function Header() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="md:hidden hover:bg-primary/10 hover:text-primary h-10 w-10"
+                className="md:hidden hover:bg-primary/10 hover:text-primary h-9 w-9"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? (
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 ) : (
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-4 w-4" />
                 )}
               </Button>
             </div>
           </div>
 
-          {/* Mobile Navigation Menu */}
+          {/* Mobile Navigation Menu - Compact */}
           {mobileMenuOpen && (
-            <div className="md:hidden border-t border-border/40 py-4 space-y-2">
+            <div className="md:hidden border-t border-border/40 py-3 space-y-1">
               <Link
                 href="/"
                 className="block px-4 py-2 text-sm font-medium text-foreground/80 hover:bg-primary/10 hover:text-primary rounded-md transition-colors"
