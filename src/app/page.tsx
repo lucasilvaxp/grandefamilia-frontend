@@ -93,14 +93,14 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Hero Banner Section - Mobile Optimized */}
+      {/* Hero Banner Section - Optimized Heights */}
       <section className="relative w-full bg-[var(--light-bg)]">
-        <div className="container px-4 py-6 md:py-12 lg:py-16">
+        <div className="container max-w-7xl mx-auto px-4 py-4 md:py-8 lg:py-12">
           <div className="max-w-5xl mx-auto">
             {/* Banner Card with Cover Image */}
-            <div className="relative rounded-xl md:rounded-2xl overflow-hidden shadow-xl md:shadow-2xl">
-              {/* Cover Image - Responsive Heights */}
-              <div className="relative w-full h-[400px] sm:h-[450px] md:h-[500px] lg:h-[550px]">
+            <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-lg md:shadow-2xl">
+              {/* Cover Image - Reduced Mobile Height */}
+              <div className="relative w-full h-[280px] sm:h-[350px] md:h-[450px] lg:h-[500px]">
                 <Image
                   src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/render/image/public/document-uploads/WhatsApp-Image-2025-11-17-at-18.13.20-1763468229731.jpeg"
                   alt="Loja A Grande Família - Catálogo de Roupas"
@@ -108,41 +108,41 @@ export default function HomePage() {
                   className="object-cover"
                   priority
                 />
-                {/* Dark Overlay for Content Readability */}
+                {/* Dark Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
               </div>
 
-              {/* Content Overlay - Mobile First */}
-              <div className="absolute inset-0 flex flex-col items-center justify-end p-4 sm:p-6 md:p-8 lg:p-10">
-                {/* Text Content - Better Mobile Spacing */}
-                <div className="text-center space-y-2 sm:space-y-3 md:space-y-4 mb-4 sm:mb-5 md:mb-6 w-full max-w-3xl">
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white drop-shadow-2xl leading-tight">
+              {/* Content Overlay - Compact Mobile */}
+              <div className="absolute inset-0 flex flex-col items-center justify-end p-3 sm:p-5 md:p-8">
+                {/* Text Content - Reduced Mobile Spacing */}
+                <div className="text-center space-y-1 sm:space-y-2 md:space-y-3 mb-3 sm:mb-4 md:mb-6 w-full max-w-3xl">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white drop-shadow-2xl leading-tight">
                     Loja A Grande Família
                   </h2>
-                  <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-primary font-semibold drop-shadow-lg">
+                  <p className="text-sm sm:text-base md:text-lg lg:text-xl text-primary font-semibold drop-shadow-lg">
                     ATACADO DE ROUPAS
                   </p>
-                  <p className="text-sm sm:text-base md:text-lg text-gray-200 drop-shadow-lg px-4">
+                  <p className="text-xs sm:text-sm md:text-base text-gray-200 drop-shadow-lg px-2">
                     Moda Feminina, Masculina e Infantil - Grandes Quantidades
                   </p>
                   
-                  {/* Badge - Mobile Optimized */}
-                  <div className="flex justify-center pt-2">
-                    <div className="inline-block bg-primary/95 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full shadow-lg">
-                      <p className="text-sm sm:text-base md:text-lg font-bold text-primary-foreground whitespace-nowrap">
+                  {/* Badge - Compact Mobile */}
+                  <div className="flex justify-center pt-1 sm:pt-2">
+                    <div className="inline-block bg-primary/95 px-3 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-lg">
+                      <p className="text-xs sm:text-sm md:text-base font-bold text-primary-foreground whitespace-nowrap">
                         Atacado a partir de 1 Peça!
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* WhatsApp Button - Mobile Friendly */}
+                {/* WhatsApp Button - Compact Mobile */}
                 <Button
-                  size="lg"
-                  className="bg-[var(--whatsapp)] hover:bg-[var(--whatsapp)]/90 text-white font-semibold text-sm sm:text-base md:text-lg px-6 sm:px-8 py-5 sm:py-6 shadow-2xl hover:scale-105 transition-transform w-full sm:w-auto max-w-sm"
+                  size="default"
+                  className="bg-[var(--whatsapp)] hover:bg-[var(--whatsapp)]/90 text-white font-semibold text-xs sm:text-sm md:text-base px-4 sm:px-6 py-4 sm:py-5 shadow-2xl hover:scale-105 transition-transform w-full sm:w-auto max-w-sm"
                   onClick={handleWhatsAppClick}
                 >
-                  <MessageCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <MessageCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                   Fale Conosco no WhatsApp
                 </Button>
               </div>
@@ -153,12 +153,12 @@ export default function HomePage() {
 
       {/* Main Content with Light Background */}
       <main className="flex-1 bg-[var(--light-bg)] text-[var(--light-foreground)]">
-        <div className="container px-4 py-6 md:py-8">
+        <div className="container max-w-7xl mx-auto px-4 py-4 md:py-6">
           {/* Desktop: Sidebar + Content | Mobile: Stacked */}
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-            {/* Desktop Filters - Fixed Width Sidebar with Sticky */}
-            <aside className="hidden lg:block w-72 flex-shrink-0">
-              <div className="sticky top-24">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
+            {/* Desktop Filters - Sticky Sidebar */}
+            <aside className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
+              <div className="sticky top-20">
                 <Filters
                   categories={categories}
                   filters={filters}
@@ -191,8 +191,8 @@ export default function HomePage() {
               </Sheet>
             </div>
 
-            {/* Product Grid - Takes Remaining Space with flex-1 */}
-            <div className="w-full lg:flex-1 lg:min-w-0 space-y-6">
+            {/* Product Grid - Flexible Width */}
+            <div className="w-full lg:flex-1 lg:min-w-0 space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">
                   {loading ? 'Carregando...' : `${products.length} produtos encontrados`}
@@ -205,11 +205,12 @@ export default function HomePage() {
                 onProductClick={setSelectedProduct}
               />
 
-              {/* Pagination */}
+              {/* Pagination - Compact Mobile */}
               {totalPages > 1 && !loading && (
-                <div className="flex items-center justify-center gap-2 pt-8 flex-wrap">
+                <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="border-gray-300 bg-white text-[var(--light-foreground)] hover:bg-gray-100"
@@ -221,6 +222,7 @@ export default function HomePage() {
                   </span>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     className="border-gray-300 bg-white text-[var(--light-foreground)] hover:bg-gray-100"
