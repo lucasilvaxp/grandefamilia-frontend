@@ -40,13 +40,17 @@ export const products = sqliteTable('products', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   description: text('description'),
-  price: text('price').notNull(), // Store as text to preserve decimal precision
+  price: text('price').notNull(),
   images: text('images', { mode: 'json' }).$type<string[]>().notNull().default([]),
   category: text('category').notNull(),
   subcategory: text('subcategory'),
   brand: text('brand').notNull(),
   stock: integer('stock').notNull().default(0),
   featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+  sizes: text('sizes', { mode: 'json' }).$type<string[]>(),
+  colors: text('colors', { mode: 'json' }).$type<Array<{ name: string; hex: string }>>(),
+  tags: text('tags', { mode: 'json' }).$type<string[]>(),
+  originalPrice: text('original_price'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
