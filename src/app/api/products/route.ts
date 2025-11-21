@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
     const formattedData = filtered.map(product => ({
       ...product,
       price: parseFloat(product.price),
+      originalPrice: product.originalPrice ? parseFloat(product.originalPrice) : null,
     }));
     
     return NextResponse.json({
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, price, images, category, subcategory, brand, stock, featured } = body;
+    const { name, description, price, images, category, subcategory, brand, stock, featured, sizes, colors, tags, originalPrice } = body;
 
     // Validate required fields
     if (!name || !price || !category || !brand) {
@@ -130,6 +131,10 @@ export async function POST(request: NextRequest) {
       brand: brand.trim(),
       stock: stock !== undefined ? stock : 0,
       featured: featured !== undefined ? featured : false,
+      sizes: sizes || null,
+      colors: colors || null,
+      tags: tags || null,
+      originalPrice: originalPrice ? originalPrice.toString() : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }).returning();
@@ -138,6 +143,7 @@ export async function POST(request: NextRequest) {
     const formattedProduct = {
       ...newProduct[0],
       price: parseFloat(newProduct[0].price),
+      originalPrice: newProduct[0].originalPrice ? parseFloat(newProduct[0].originalPrice) : null,
     };
 
     return NextResponse.json(formattedProduct, { status: 201 });
