@@ -40,8 +40,8 @@ export function useCart() {
   const addToCart = useCallback((
     product: Product,
     quantity: number,
-    selectedSize: string,
-    selectedColor: Color
+    selectedSize?: string,
+    selectedColor?: Color
   ) => {
     console.log('Adding to cart:', { product, quantity, selectedSize, selectedColor });
     
@@ -49,9 +49,9 @@ export function useCart() {
       // Check if item already exists
       const existingIndex = prevCart.findIndex(
         item =>
-          item.product._id === product._id &&
+          item.product.id === product.id &&
           item.selectedSize === selectedSize &&
-          item.selectedColor.hex === selectedColor.hex
+          item.selectedColor?.hex === selectedColor?.hex
       );
 
       let newCart: CartItem[];
