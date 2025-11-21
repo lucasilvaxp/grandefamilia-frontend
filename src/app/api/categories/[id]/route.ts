@@ -1,183 +1,129 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FASTAPI_BASE_URL } from '@/lib/api-config';
-import { mockStore } from '@/lib/mock-store';
+import { db } from '@/db';
+import { categories } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
-// Check if we should use mock data
-function shouldUseMockData() {
-  return process.env.USE_MOCK_DATA === 'true' || !process.env.NEXT_PUBLIC_FASTAPI_URL;
-}
-
-export async function PUT(
+// GET /api/categories/[id] - Get single category
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const body = await request.json();
     const { id } = await params;
-    
-    console.log('[API Categories PUT] Request:', id, body);
-    console.log('[API Categories PUT] Mock mode:', shouldUseMockData());
-    
-    // MOCK MODE: Use mock store with persistence
-    if (shouldUseMockData()) {
-      console.log('[API Categories PUT] Using MOCK store with persistence');
-      
-      // Validate required fields
-      if (!body.name || !body.slug) {
-        return NextResponse.json(
-          { error: 'Nome e slug são obrigatórios' },
-          { status: 400 }
-        );
-      }
-      
-      // Update in mock store
-      const updatedCategory = mockStore.categories.update(id, {
-        name: body.name,
-        slug: body.slug,
-        subcategories: body.subcategories || [],
-        image: body.image || '',
-      });
-      
-      if (!updatedCategory) {
-        return NextResponse.json(
-          { error: 'Categoria não encontrada' },
-          { status: 404 }
-        );
-      }
-      
-      console.log('[API Categories PUT] Category updated in mock store');
-      return NextResponse.json(updatedCategory);
-    }
 
-    // REAL MODE: Connect to FastAPI
-    console.log('[API] Backend URL:', `${FASTAPI_BASE_URL}/api/categories/${id}`);
-
-    const response = await fetch(`${FASTAPI_BASE_URL}/api/categories/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    console.log('[API] Response status:', response.status);
-    console.log('[API] Response content-type:', response.headers.get('content-type'));
-
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      let errorMessage = 'Failed to update category';
-      
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        errorMessage = error.detail || error.message || errorMessage;
-      } else {
-        const text = await response.text();
-        console.error('[API] Non-JSON error response:', text.substring(0, 200));
-        
-        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-          errorMessage = 'Backend não está respondendo. Verifique se o FastAPI está rodando.';
-        }
-      }
-      
+    if (!id || isNaN(parseInt(id))) {
       return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status }
+        { error: 'Valid ID is required', code: 'INVALID_ID' },
+        { status: 400 }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const category = await db.select().from(categories).where(eq(categories.id, parseInt(id))).limit(1);
+
+    if (category.length === 0) {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(category[0]);
   } catch (error) {
-    console.error('[API] Error updating category:', error);
-    
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      return NextResponse.json(
-        { error: 'Não foi possível conectar ao backend. Verifique se o FastAPI está rodando em ' + FASTAPI_BASE_URL },
-        { status: 503 }
-      );
-    }
-    
+    console.error('GET /api/categories/[id] error:', error);
     return NextResponse.json(
-      { error: 'Failed to update category' },
+      { error: 'Failed to fetch category: ' + error },
       { status: 500 }
     );
   }
 }
 
+// PUT /api/categories/[id] - Update category
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    if (!id || isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: 'Valid ID is required', code: 'INVALID_ID' },
+        { status: 400 }
+      );
+    }
+
+    const { name, slug, subcategories, image } = body;
+
+    if (!name || !slug) {
+      return NextResponse.json(
+        { error: 'Nome e slug são obrigatórios', code: 'MISSING_REQUIRED_FIELDS' },
+        { status: 400 }
+      );
+    }
+
+    const updatedCategory = await db.update(categories)
+      .set({
+        name: name.trim(),
+        slug: slug.trim(),
+        subcategories: subcategories || [],
+        image: image || null,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(categories.id, parseInt(id)))
+      .returning();
+
+    if (updatedCategory.length === 0) {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(updatedCategory[0]);
+  } catch (error) {
+    console.error('PUT /api/categories/[id] error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update category: ' + error },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/categories/[id] - Delete category
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    
-    console.log('[API Categories DELETE] Request:', id);
-    console.log('[API Categories DELETE] Mock mode:', shouldUseMockData());
-    
-    // MOCK MODE: Use mock store with persistence
-    if (shouldUseMockData()) {
-      console.log('[API Categories DELETE] Using MOCK store with persistence');
-      
-      // Delete from mock store
-      const deleted = mockStore.categories.delete(id);
-      
-      if (!deleted) {
-        return NextResponse.json(
-          { error: 'Categoria não encontrada' },
-          { status: 404 }
-        );
-      }
-      
-      console.log('[API Categories DELETE] Category deleted from mock store');
-      return NextResponse.json({ 
-        message: 'Category deleted successfully',
-        _id: id 
-      });
+
+    if (!id || isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: 'Valid ID is required', code: 'INVALID_ID' },
+        { status: 400 }
+      );
     }
 
-    // REAL MODE: Connect to FastAPI
-    console.log('[API] Backend URL:', `${FASTAPI_BASE_URL}/api/categories/${id}`);
+    const deletedCategory = await db.delete(categories)
+      .where(eq(categories.id, parseInt(id)))
+      .returning();
 
-    const response = await fetch(`${FASTAPI_BASE_URL}/api/categories/${id}`, {
-      method: 'DELETE',
+    if (deletedCategory.length === 0) {
+      return NextResponse.json(
+        { error: 'Category not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ 
+      message: 'Category deleted successfully',
+      id: parseInt(id)
     });
-
-    console.log('[API] Response status:', response.status);
-
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      let errorMessage = 'Failed to delete category';
-      
-      if (contentType && contentType.includes('application/json')) {
-        const error = await response.json();
-        errorMessage = error.detail || error.message || errorMessage;
-      } else {
-        const text = await response.text();
-        console.error('[API] Non-JSON error response:', text.substring(0, 200));
-        
-        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-          errorMessage = 'Backend não está respondendo. Verifique se o FastAPI está rodando.';
-        }
-      }
-      
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
   } catch (error) {
-    console.error('[API] Error deleting category:', error);
-    
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      return NextResponse.json(
-        { error: 'Não foi possível conectar ao backend. Verifique se o FastAPI está rodando em ' + FASTAPI_BASE_URL },
-        { status: 503 }
-      );
-    }
-    
+    console.error('DELETE /api/categories/[id] error:', error);
     return NextResponse.json(
-      { error: 'Failed to delete category' },
+      { error: 'Failed to delete category: ' + error },
       { status: 500 }
     );
   }

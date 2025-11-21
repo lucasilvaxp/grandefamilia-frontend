@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FASTAPI_BASE_URL } from '@/lib/api-config';
-import { mockProducts } from '@/lib/mock-data';
+import { db } from '@/db';
+import { products } from '@/db/schema';
+import { eq, like, and, or, desc, asc } from 'drizzle-orm';
 
 // GET /api/products - List products with filters
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  
-  // In development, use mock data. In production, proxy to FastAPI
-  const useMockData = process.env.USE_MOCK_DATA === 'true' || !process.env.NEXT_PUBLIC_FASTAPI_URL;
-  
-  if (useMockData) {
-    // Mock data filtering
-    let filtered = [...mockProducts];
+  try {
+    const { searchParams } = new URL(request.url);
     
     const category = searchParams.get('category');
     const subcategory = searchParams.get('subcategory');
@@ -24,135 +19,121 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     
+    // Build where conditions
+    const conditions = [];
+    
     if (category) {
-      filtered = filtered.filter(p => p.category === category);
+      conditions.push(eq(products.category, category));
     }
     if (subcategory) {
-      filtered = filtered.filter(p => p.subcategory === subcategory);
+      conditions.push(eq(products.subcategory, subcategory));
     }
     if (brand) {
-      filtered = filtered.filter(p => p.brand === brand);
+      conditions.push(eq(products.brand, brand));
     }
     if (featured === 'true') {
-      filtered = filtered.filter(p => p.featured);
-    }
-    if (minPrice) {
-      filtered = filtered.filter(p => p.price >= parseFloat(minPrice));
-    }
-    if (maxPrice) {
-      filtered = filtered.filter(p => p.price <= parseFloat(maxPrice));
+      conditions.push(eq(products.featured, true));
     }
     if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(searchLower) ||
-        p.description.toLowerCase().includes(searchLower) ||
-        p.tags?.some(tag => tag.toLowerCase().includes(searchLower))
+      conditions.push(
+        or(
+          like(products.name, `%${search}%`),
+          like(products.description, `%${search}%`)
+        )
       );
     }
     
-    // Sorting
-    switch (sort) {
-      case 'price_asc':
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case 'price_desc':
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-      case 'popular':
-        filtered.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
-        break;
+    // Build base query
+    let query = db.select().from(products);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
     }
     
-    // Pagination
-    const total = filtered.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const start = (page - 1) * pageSize;
-    const paginatedData = filtered.slice(start, start + pageSize);
+    // Apply sorting
+    switch (sort) {
+      case 'price_asc':
+        query = query.orderBy(asc(products.price));
+        break;
+      case 'price_desc':
+        query = query.orderBy(desc(products.price));
+        break;
+      case 'newest':
+        query = query.orderBy(desc(products.createdAt));
+        break;
+      default:
+        query = query.orderBy(desc(products.createdAt));
+    }
+    
+    // Get all results first for total count
+    const allResults = await query;
+    const total = allResults.length;
+    
+    // Apply pagination
+    const offset = (page - 1) * pageSize;
+    const paginatedResults = allResults.slice(offset, offset + pageSize);
+    
+    // Filter by price range (since SQLite stores price as text)
+    let filtered = paginatedResults;
+    if (minPrice || maxPrice) {
+      filtered = paginatedResults.filter(p => {
+        const price = parseFloat(p.price);
+        if (minPrice && price < parseFloat(minPrice)) return false;
+        if (maxPrice && price > parseFloat(maxPrice)) return false;
+        return true;
+      });
+    }
     
     return NextResponse.json({
-      data: paginatedData,
+      data: filtered,
       total,
       page,
       pageSize,
-      totalPages,
+      totalPages: Math.ceil(total / pageSize),
     });
-  }
-  
-  try {
-    // Proxy to FastAPI backend
-    const queryString = searchParams.toString();
-    const url = `${FASTAPI_BASE_URL}/api/products${queryString ? `?${queryString}` : ''}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`FastAPI returned ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching from FastAPI:', error);
+    console.error('GET /api/products error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { error: 'Failed to fetch products: ' + error },
       { status: 500 }
     );
   }
 }
 
-// POST /api/products - Create product (with fallback)
+// POST /api/products - Create new product
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  
-  console.log('[PRODUCT POST] Creating product with data:', { 
-    name: body.name, 
-    hasImages: body.images?.length > 0 
-  });
-  
-  // Always use fallback in production to ensure reliability
-  // Backend will sync later if available
-  const newProduct = {
-    _id: `prod_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    ...body,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    rating: 0,
-    reviewCount: 0,
-  };
-  
-  console.log('[PRODUCT POST] Created product:', newProduct._id);
-  
-  // Add to mock data for immediate availability
-  mockProducts.unshift(newProduct);
-  
-  // Try to sync with backend asynchronously (fire and forget)
   try {
-    fetch(`${FASTAPI_BASE_URL}/api/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(5000),
-    }).then(res => {
-      if (res.ok) {
-        console.log('[PRODUCT POST] Backend sync successful');
-      } else {
-        console.log('[PRODUCT POST] Backend sync failed:', res.status);
-      }
-    }).catch(err => {
-      console.log('[PRODUCT POST] Backend sync error:', err.message);
-    });
+    const body = await request.json();
+    const { name, description, price, images, category, subcategory, brand, stock, featured } = body;
+
+    // Validate required fields
+    if (!name || !price || !category || !brand) {
+      return NextResponse.json(
+        { error: 'Name, price, category, and brand are required', code: 'MISSING_REQUIRED_FIELDS' },
+        { status: 400 }
+      );
+    }
+
+    const newProduct = await db.insert(products).values({
+      name: name.trim(),
+      description: description || null,
+      price: price.toString(),
+      images: images || [],
+      category: category.trim(),
+      subcategory: subcategory || null,
+      brand: brand.trim(),
+      stock: stock !== undefined ? stock : 0,
+      featured: featured !== undefined ? featured : false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }).returning();
+
+    return NextResponse.json(newProduct[0], { status: 201 });
   } catch (error) {
-    // Ignore backend sync errors
+    console.error('POST /api/products error:', error);
+    return NextResponse.json(
+      { error: 'Failed to create product: ' + error },
+      { status: 500 }
+    );
   }
-  
-  return NextResponse.json(newProduct, { status: 201 });
 }

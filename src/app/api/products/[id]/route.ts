@@ -1,39 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FASTAPI_BASE_URL } from '@/lib/api-config';
-import { mockProducts } from '@/lib/mock-data';
+import { db } from '@/db';
+import { products } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 // GET /api/products/[id] - Get single product
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const useMockData = process.env.USE_MOCK_DATA === 'true' || !process.env.NEXT_PUBLIC_FASTAPI_URL;
-  
-  if (useMockData) {
-    const product = mockProducts.find(p => p._id === id);
-    if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-    }
-    return NextResponse.json(product);
-  }
-  
   try {
-    const response = await fetch(`${FASTAPI_BASE_URL}/api/products/${id}`);
-    
-    if (!response.ok) {
-      if (response.status === 404) {
-        return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-      }
-      throw new Error(`FastAPI returned ${response.status}`);
+    const { id } = await params;
+
+    if (!id || isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: 'Valid ID is required', code: 'INVALID_ID' },
+        { status: 400 }
+      );
     }
-    
-    const data = await response.json();
-    return NextResponse.json(data);
+
+    const product = await db.select().from(products).where(eq(products.id, parseInt(id))).limit(1);
+
+    if (product.length === 0) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(product[0]);
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('GET /api/products/[id] error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch product' },
+      { error: 'Failed to fetch product: ' + error },
       { status: 500 }
     );
   }
@@ -44,55 +42,47 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  
   try {
+    const { id } = await params;
     const body = await request.json();
-    console.log('[UPDATE] Attempting to update product:', id);
-    
-    // Try FastAPI backend first (with timeout)
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
-      const response = await fetch(`${FASTAPI_BASE_URL}/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[UPDATE] Backend update successful');
-        return NextResponse.json(data);
-      }
-    } catch (fetchError) {
-      console.log('[UPDATE] Backend unavailable, using fallback');
+
+    if (!id || isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: 'Valid ID is required', code: 'INVALID_ID' },
+        { status: 400 }
+      );
     }
-    
-    // Fallback: Return success with updated data (dev mode)
-    console.log('[UPDATE] Using fallback - simulating update success');
-    const updatedProduct = {
-      ...body,
-      _id: id,
-      updatedAt: new Date().toISOString(),
-    };
-    
-    // Try to update in mock data if exists
-    const productIndex = mockProducts.findIndex(p => p._id === id);
-    if (productIndex !== -1) {
-      mockProducts[productIndex] = updatedProduct;
+
+    const { name, description, price, images, category, subcategory, brand, stock, featured } = body;
+
+    const updatedProduct = await db.update(products)
+      .set({
+        name: name ? name.trim() : undefined,
+        description: description !== undefined ? description : undefined,
+        price: price ? price.toString() : undefined,
+        images: images !== undefined ? images : undefined,
+        category: category ? category.trim() : undefined,
+        subcategory: subcategory !== undefined ? subcategory : undefined,
+        brand: brand ? brand.trim() : undefined,
+        stock: stock !== undefined ? stock : undefined,
+        featured: featured !== undefined ? featured : undefined,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(products.id, parseInt(id)))
+      .returning();
+
+    if (updatedProduct.length === 0) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
     }
-    
-    console.log('[UPDATE] Fallback update successful');
-    return NextResponse.json(updatedProduct);
+
+    return NextResponse.json(updatedProduct[0]);
   } catch (error) {
-    console.error('[UPDATE] Error updating product:', error);
+    console.error('PUT /api/products/[id] error:', error);
     return NextResponse.json(
-      { error: 'Failed to update product' },
+      { error: 'Failed to update product: ' + error },
       { status: 500 }
     );
   }
@@ -103,46 +93,35 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  
   try {
-    console.log('[DELETE] Attempting to delete product:', id);
-    
-    // Try FastAPI backend first (with timeout)
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
-      const response = await fetch(`${FASTAPI_BASE_URL}/api/products/${id}`, {
-        method: 'DELETE',
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        console.log('[DELETE] Backend delete successful');
-        return new NextResponse(null, { status: 204 });
-      }
-    } catch (fetchError) {
-      console.log('[DELETE] Backend unavailable, using fallback');
+    const { id } = await params;
+
+    if (!id || isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: 'Valid ID is required', code: 'INVALID_ID' },
+        { status: 400 }
+      );
     }
-    
-    // Fallback: Return success (dev mode)
-    console.log('[DELETE] Using fallback - simulating delete success');
-    
-    // Try to delete from mock data if exists
-    const productIndex = mockProducts.findIndex(p => p._id === id);
-    if (productIndex !== -1) {
-      mockProducts.splice(productIndex, 1);
+
+    const deletedProduct = await db.delete(products)
+      .where(eq(products.id, parseInt(id)))
+      .returning();
+
+    if (deletedProduct.length === 0) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
     }
-    
-    console.log('[DELETE] Fallback delete successful');
-    return new NextResponse(null, { status: 204 });
+
+    return NextResponse.json({ 
+      message: 'Product deleted successfully',
+      id: parseInt(id)
+    });
   } catch (error) {
-    console.error('[DELETE] Error deleting product:', error);
+    console.error('DELETE /api/products/[id] error:', error);
     return NextResponse.json(
-      { error: 'Failed to delete product' },
+      { error: 'Failed to delete product: ' + error },
       { status: 500 }
     );
   }

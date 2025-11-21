@@ -1,56 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FASTAPI_BASE_URL } from '@/lib/api-config';
+import { db } from '@/db';
+import { settings } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
+// GET /api/settings - Get settings (singleton, always id=1)
 export async function GET() {
   try {
-    const response = await fetch(`${FASTAPI_BASE_URL}/settings`, {
-      cache: 'no-store',
-    });
+    let settingsData = await db.select().from(settings).where(eq(settings.id, 1)).limit(1);
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Erro ao buscar configurações' },
-        { status: response.status }
-      );
+    // If settings don't exist, create default settings
+    if (settingsData.length === 0) {
+      const defaultSettings = await db.insert(settings).values({
+        storeName: 'Loja A Grande Família',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).returning();
+
+      settingsData = defaultSettings;
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(settingsData[0]);
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    console.error('GET /api/settings error:', error);
     return NextResponse.json(
-      { error: 'Erro ao buscar configurações' },
+      { error: 'Erro ao buscar configurações: ' + error },
       { status: 500 }
     );
   }
 }
 
+// PUT /api/settings - Update settings (singleton, always id=1)
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+    const { logo, storeName, phone, email, address, instagramUrl, facebookUrl, whatsappNumber, businessHours } = body;
 
-    const response = await fetch(`${FASTAPI_BASE_URL}/settings`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    // Check if settings exist
+    const existingSettings = await db.select().from(settings).where(eq(settings.id, 1)).limit(1);
 
-    if (!response.ok) {
-      const error = await response.json();
-      return NextResponse.json(
-        { error: error.detail || 'Erro ao atualizar configurações' },
-        { status: response.status }
-      );
+    let updatedSettings;
+
+    if (existingSettings.length === 0) {
+      // Create if doesn't exist
+      updatedSettings = await db.insert(settings).values({
+        logo: logo || null,
+        storeName: storeName || 'Loja A Grande Família',
+        phone: phone || null,
+        email: email || null,
+        address: address || null,
+        instagramUrl: instagramUrl || null,
+        facebookUrl: facebookUrl || null,
+        whatsappNumber: whatsappNumber || null,
+        businessHours: businessHours || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).returning();
+    } else {
+      // Update existing
+      updatedSettings = await db.update(settings)
+        .set({
+          logo: logo || null,
+          storeName: storeName || 'Loja A Grande Família',
+          phone: phone || null,
+          email: email || null,
+          address: address || null,
+          instagramUrl: instagramUrl || null,
+          facebookUrl: facebookUrl || null,
+          whatsappNumber: whatsappNumber || null,
+          businessHours: businessHours || null,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(settings.id, 1))
+        .returning();
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(updatedSettings[0]);
   } catch (error) {
-    console.error('Error updating settings:', error);
+    console.error('PUT /api/settings error:', error);
     return NextResponse.json(
-      { error: 'Erro ao atualizar configurações' },
+      { error: 'Erro ao atualizar configurações: ' + error },
       { status: 500 }
     );
   }
