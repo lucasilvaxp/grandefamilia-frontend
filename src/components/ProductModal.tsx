@@ -30,21 +30,28 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
 
   if (!product) return null;
 
+  // Safe fallbacks for optional fields
+  const images = product.images || [];
+  const sizes = product.sizes || [];
+  const colors = product.colors || [];
+  const stock = product.stock ?? 0;
+  const tags = product.tags || [];
+
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
   const handleAddToCart = () => {
-    if (!selectedSize) {
+    if (sizes.length > 0 && !selectedSize) {
       toast.error('Por favor, selecione um tamanho');
       return;
     }
-    if (!selectedColor) {
+    if (colors.length > 0 && !selectedColor) {
       toast.error('Por favor, selecione uma cor');
       return;
     }
 
-    addToCart(product, quantity, selectedSize, selectedColor);
+    addToCart(product, quantity, selectedSize, selectedColor!);
     toast.success('Produto adicionado ao carrinho!');
     onClose();
   };
@@ -60,6 +67,8 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
     }
   };
 
+  const currentImage = images[selectedImage] || images[0] || '/placeholder-product.jpg';
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -72,7 +81,7 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
           <div className="space-y-4">
             <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
               <Image
-                src={product.images[selectedImage]}
+                src={currentImage}
                 alt={product.name}
                 fill
                 className="object-cover"
@@ -85,9 +94,9 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
               )}
             </div>
 
-            {product.images.length > 1 && (
+            {images.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
-                {product.images.map((image, idx) => (
+                {images.map((image, idx) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
@@ -114,7 +123,9 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
           <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold mb-2">{product.name}</h2>
-              <p className="text-muted-foreground">{product.brand}</p>
+              {product.brand && (
+                <p className="text-muted-foreground">{product.brand}</p>
+              )}
             </div>
 
             {product.rating && (
@@ -123,9 +134,11 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-medium">{product.rating}</span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  ({product.reviewCount} avaliações)
-                </span>
+                {product.reviewCount && (
+                  <span className="text-sm text-muted-foreground">
+                    ({product.reviewCount} avaliações)
+                  </span>
+                )}
               </div>
             )}
 
@@ -140,52 +153,58 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
               </span>
             </div>
 
-            <p className="text-sm text-muted-foreground">{product.description}</p>
+            {product.description && (
+              <p className="text-sm text-muted-foreground">{product.description}</p>
+            )}
 
             {/* Size Selection */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Tamanho: {selectedSize && <span className="text-primary">{selectedSize}</span>}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {product.sizes.map(size => (
-                  <Button
-                    key={size}
-                    variant={selectedSize === size ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedSize(size)}
-                  >
-                    {size}
-                  </Button>
-                ))}
+            {sizes.length > 0 && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Tamanho: {selectedSize && <span className="text-primary">{selectedSize}</span>}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map(size => (
+                    <Button
+                      key={size}
+                      variant={selectedSize === size ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedSize(size)}
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Color Selection */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Cor: {selectedColor && <span className="text-primary">{selectedColor.name}</span>}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {product.colors.map((color, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedColor(color)}
-                    className={`relative h-10 w-10 rounded-full border-2 transition-all ${
-                      selectedColor?.hex === color.hex
-                        ? 'border-primary scale-110'
-                        : 'border-gray-300 hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
-                  >
-                    {selectedColor?.hex === color.hex && (
-                      <Check className="h-5 w-5 absolute inset-0 m-auto text-white drop-shadow-md" />
-                    )}
-                  </button>
-                ))}
+            {colors.length > 0 && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Cor: {selectedColor && <span className="text-primary">{selectedColor.name}</span>}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((color, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedColor(color)}
+                      className={`relative h-10 w-10 rounded-full border-2 transition-all ${
+                        selectedColor?.hex === color.hex
+                          ? 'border-primary scale-110'
+                          : 'border-gray-300 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color.hex }}
+                      title={color.name}
+                    >
+                      {selectedColor?.hex === color.hex && (
+                        <Check className="h-5 w-5 absolute inset-0 m-auto text-white drop-shadow-md" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quantity */}
             <div>
@@ -203,13 +222,13 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                  disabled={quantity >= product.stock}
+                  onClick={() => setQuantity(Math.min(stock, quantity + 1))}
+                  disabled={quantity >= stock}
                 >
                   +
                 </Button>
                 <span className="text-sm text-muted-foreground ml-2">
-                  ({product.stock} disponíveis)
+                  ({stock} disponíveis)
                 </span>
               </div>
             </div>
@@ -219,16 +238,16 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
               className="w-full"
               size="lg"
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              disabled={stock === 0}
             >
               <ShoppingCart className="h-5 w-5 mr-2" />
-              {product.stock === 0 ? 'Esgotado' : 'Adicionar ao Carrinho'}
+              {stock === 0 ? 'Esgotado' : 'Adicionar ao Carrinho'}
             </Button>
 
             {/* Tags */}
-            {product.tags && product.tags.length > 0 && (
+            {tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {product.tags.map((tag, idx) => (
+                {tags.map((tag, idx) => (
                   <Badge key={idx} variant="secondary">
                     {tag}
                   </Badge>
