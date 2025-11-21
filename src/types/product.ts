@@ -44,8 +44,8 @@ export interface Brand {
 export interface CartItem {
   product: Product;
   quantity: number;
-  selectedSize: string;
-  selectedColor: Color;
+  selectedSize?: string;
+  selectedColor?: Color;
 }
 
 export interface FilterOptions {
