@@ -17,6 +17,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [logo, setLogo] = useState('/logo-grande-familia.png');
   const router = useRouter();
   const { isAuthenticated, login, isLoading: authLoading } = useAuth();
 
@@ -25,6 +26,18 @@ export default function AdminLoginPage() {
       router.push('/admin');
     }
   }, [isAuthenticated, authLoading, router]);
+
+  useEffect(() => {
+    // Fetch logo from settings
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo) {
+          setLogo(data.logo);
+        }
+      })
+      .catch(err => console.error('Error fetching logo:', err));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +87,7 @@ export default function AdminLoginPage() {
           <div className="flex justify-center">
             <div className="relative h-24 w-24">
               <Image
-                src="/logo-grande-familia.png"
+                src={logo}
                 alt="Loja A Grande Família"
                 fill
                 className="object-contain"
