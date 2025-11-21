@@ -78,9 +78,9 @@ export function ProductFormDialog({
         featured: product.featured,
         tags: product.tags || [],
       });
-      setSizes(product.sizes);
-      setColors(product.colors);
-      setImages(product.images);
+      setSizes(product.sizes || []);
+      setColors(product.colors || []);
+      setImages(product.images || []);
     } else {
       resetForm();
     }
