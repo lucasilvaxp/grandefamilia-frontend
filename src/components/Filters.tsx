@@ -178,7 +178,7 @@ export function Filters({ categories, filters, onFiltersChange }: FiltersProps) 
           <SelectContent>
             <SelectItem value="all">Todas as categorias</SelectItem>
             {categories.map(cat => (
-              <SelectItem key={cat._id} value={cat.name}>
+              <SelectItem key={cat.id} value={cat.name}>
                 {cat.name}
               </SelectItem>
             ))}

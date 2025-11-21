@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { uploadImage } from '@/lib/supabase';
 
 const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
 
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedUrls: string[] = [];
+
+    // Check if Supabase is configured
+    const hasSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     // Process each file
     for (const file of files) {
@@ -42,46 +46,25 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Convert to base64
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const base64 = buffer.toString('base64');
-        const dataUrl = `data:${file.type};base64,${base64}`;
+        let finalUrl: string;
 
-        console.log('[UPLOAD] Converted to base64, size:', dataUrl.length);
-
-        // Try to use FastAPI backend for validation, but fallback to direct storage
-        let finalUrl = dataUrl;
-
-        try {
-          const backendResponse = await fetch(`${FASTAPI_URL}/api/upload`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              filename: file.name,
-              content_type: file.type,
-              data: dataUrl,
-            }),
-          });
-
-          if (backendResponse.ok) {
-            const result = await backendResponse.json();
-            finalUrl = result.url;
-            console.log('[UPLOAD] Backend validation successful');
-          } else {
-            console.warn('[UPLOAD] Backend validation failed, using direct storage');
-            // Fallback: use dataUrl directly
-          }
-        } catch (backendError) {
-          console.warn('[UPLOAD] Backend unavailable, using direct storage:', backendError);
-          // Fallback: use dataUrl directly
+        // Use Supabase Storage if configured (for production)
+        if (hasSupabase) {
+          console.log('[UPLOAD] Using Supabase Storage');
+          finalUrl = await uploadImage(file);
+          console.log('[UPLOAD] Supabase upload successful:', finalUrl);
+        } else {
+          // Fallback to base64 for local development
+          console.log('[UPLOAD] Using base64 fallback (local development)');
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          const base64 = buffer.toString('base64');
+          finalUrl = `data:${file.type};base64,${base64}`;
         }
 
         uploadedUrls.push(finalUrl);
       } catch (conversionError) {
-        console.error('[UPLOAD] Conversion error:', conversionError);
+        console.error('[UPLOAD] Upload error:', conversionError);
         return NextResponse.json(
           { error: `Erro ao processar ${file.name}` },
           { status: 500 }

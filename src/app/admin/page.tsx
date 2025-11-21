@@ -115,13 +115,13 @@ export default function AdminPage() {
     if (!productToDelete) return;
 
     try {
-      const response = await fetch(`/api/products/${productToDelete._id}`, {
+      const response = await fetch(`/api/products/${productToDelete.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         // Optimistic update: remove from local state immediately
-        setProducts(prev => prev.filter(p => p._id !== productToDelete._id));
+        setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
         toast.success('Produto excluído com sucesso');
         
         // Refresh data after a delay to sync with backend
@@ -149,7 +149,7 @@ export default function AdminPage() {
       if (editingProduct) {
         // Update existing product
         setProducts(prev => prev.map(p => 
-          p._id === updatedProduct._id ? updatedProduct : p
+          p.id === updatedProduct.id ? updatedProduct : p
         ));
       } else {
         // Add new product
@@ -332,7 +332,7 @@ export default function AdminPage() {
                     </TableHeader>
                     <TableBody>
                       {products.map(product => (
-                        <TableRow key={product._id}>
+                        <TableRow key={product.id}>
                           <TableCell>
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-gray-100">
                               <Image
@@ -395,7 +395,7 @@ export default function AdminPage() {
                 {/* Mobile Cards - Hidden on Desktop */}
                 <div className="md:hidden space-y-4">
                   {products.map(product => (
-                    <Card key={product._id} className="overflow-hidden">
+                    <Card key={product.id} className="overflow-hidden">
                       <div className="flex gap-4 p-4">
                         {/* Image */}
                         <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded bg-gray-100">

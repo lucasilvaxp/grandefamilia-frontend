@@ -1,14 +1,14 @@
 export interface Brand {
-  _id: string;
+  id: number;
   name: string;
+  slug: string;
   description?: string;
   logo?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface Banner {
-  _id: string;
+  id: number;
   title: string;
   description?: string;
   image: string;
@@ -20,7 +20,7 @@ export interface Banner {
 }
 
 export interface StoreSettings {
-  _id: string;
+  id: number;
   storeName: string;
   storeDescription?: string;
   logo?: string;

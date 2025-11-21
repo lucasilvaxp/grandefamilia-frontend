@@ -73,7 +73,7 @@ export function ProductFormDialog({
         originalPrice: product.originalPrice?.toString() || '',
         category: product.category,
         subcategory: product.subcategory || '',
-        brand: product.brand,
+        brand: product.brand || '',
         stock: product.stock.toString(),
         featured: product.featured,
         tags: product.tags || [],
@@ -130,7 +130,7 @@ export function ProductFormDialog({
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         category: formData.category,
         subcategory: formData.subcategory || undefined,
-        brand: formData.brand,
+        brand: formData.brand || undefined,
         sizes,
         colors,
         images,
@@ -139,7 +139,7 @@ export function ProductFormDialog({
         tags: formData.tags,
       };
 
-      const url = product ? `/api/products/${product._id}` : '/api/products';
+      const url = product ? `/api/products/${product.id}` : '/api/products';
       const method = product ? 'PUT' : 'POST';
 
       console.log('[ProductFormDialog] Submitting:', method, url, payload);
@@ -154,7 +154,7 @@ export function ProductFormDialog({
 
       if (response.ok) {
         const updatedProduct = await response.json();
-        console.log('[ProductFormDialog] Product saved:', updatedProduct._id);
+        console.log('[ProductFormDialog] Product saved:', updatedProduct.id);
         toast.success(product ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!');
         
         // Pass the updated/created product back to parent
@@ -285,7 +285,7 @@ export function ProductFormDialog({
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(cat => (
-                          <SelectItem key={cat._id} value={cat.name}>
+                          <SelectItem key={cat.id} value={cat.name}>
                             {cat.name}
                           </SelectItem>
                         ))}
@@ -318,12 +318,12 @@ export function ProductFormDialog({
                   {/* Brand & Stock */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="brand">Marca *</Label>
+                      <Label htmlFor="brand">Marca</Label>
                       <Input
                         id="brand"
                         value={formData.brand}
                         onChange={e => setFormData({ ...formData, brand: e.target.value })}
-                        required
+                        placeholder="Opcional"
                       />
                     </div>
                     <div className="space-y-2">

@@ -63,17 +63,19 @@ export function CategoryManager() {
   }, []);
 
   useEffect(() => {
-    if (editingCategory) {
-      setFormData({
-        name: editingCategory.name,
-        slug: editingCategory.slug,
-        image: editingCategory.image || '',
-      });
-      setSubcategories(editingCategory.subcategories || []);
-    } else {
-      resetForm();
+    if (formOpen) {
+      if (editingCategory) {
+        setFormData({
+          name: editingCategory.name,
+          slug: editingCategory.slug,
+          image: editingCategory.image || '',
+        });
+        setSubcategories(editingCategory.subcategories || []);
+      } else {
+        resetForm();
+      }
     }
-  }, [editingCategory]);
+  }, [editingCategory, formOpen]);
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -82,6 +84,8 @@ export function CategoryManager() {
       if (response.ok) {
         const data = await response.json();
         setCategories(data);
+      } else {
+        toast.error('Erro ao carregar categorias');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -103,14 +107,16 @@ export function CategoryManager() {
 
     try {
       const payload = {
-        name: formData.name,
-        slug: formData.slug,
-        subcategories,
-        image: formData.image || undefined,
+        name: formData.name.trim(),
+        slug: formData.slug.trim(),
+        subcategories: subcategories.filter(s => s.trim()),
+        image: formData.image.trim() || undefined,
       };
 
-      const url = editingCategory ? `/api/categories/${editingCategory._id}` : '/api/categories';
+      const url = editingCategory ? `/api/categories/${editingCategory.id}` : '/api/categories';
       const method = editingCategory ? 'PUT' : 'POST';
+
+      console.log('[CategoryManager] Submitting:', method, url, payload);
 
       const response = await fetch(url, {
         method,
@@ -118,17 +124,21 @@ export function CategoryManager() {
         body: JSON.stringify(payload),
       });
 
+      console.log('[CategoryManager] Response status:', response.status);
+
       if (response.ok) {
         toast.success(editingCategory ? 'Categoria atualizada!' : 'Categoria criada!');
         setFormOpen(false);
         setEditingCategory(null);
-        fetchCategories();
+        resetForm();
+        await fetchCategories();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Erro ao salvar categoria');
+        console.error('[CategoryManager] Error response:', error);
+        toast.error(error.error || error.detail || 'Erro ao salvar categoria');
       }
     } catch (error) {
-      console.error('Error saving category:', error);
+      console.error('[CategoryManager] Error saving category:', error);
       toast.error('Erro ao salvar categoria');
     } finally {
       setLoading(false);
@@ -138,35 +148,47 @@ export function CategoryManager() {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
 
+    setLoading(true);
     try {
-      const response = await fetch(`/api/categories/${categoryToDelete._id}`, {
+      const response = await fetch(`/api/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         toast.success('Categoria excluída com sucesso');
-        fetchCategories();
+        await fetchCategories();
       } else {
-        toast.error('Erro ao excluir categoria');
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao excluir categoria');
       }
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error('Erro ao excluir categoria');
     } finally {
+      setLoading(false);
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
     }
   };
 
   const addSubcategory = () => {
-    if (newSubcategory && !subcategories.includes(newSubcategory)) {
-      setSubcategories([...subcategories, newSubcategory]);
+    const trimmed = newSubcategory.trim();
+    if (trimmed && !subcategories.includes(trimmed)) {
+      setSubcategories([...subcategories, trimmed]);
       setNewSubcategory('');
+    } else if (subcategories.includes(trimmed)) {
+      toast.error('Subcategoria já adicionada');
     }
   };
 
   const removeSubcategory = (sub: string) => {
     setSubcategories(subcategories.filter(s => s !== sub));
+  };
+
+  const handleCloseDialog = () => {
+    setFormOpen(false);
+    setEditingCategory(null);
+    resetForm();
   };
 
   return (
@@ -204,7 +226,7 @@ export function CategoryManager() {
             </TableHeader>
             <TableBody>
               {categories.map(category => (
-                <TableRow key={category._id}>
+                <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell>{category.slug}</TableCell>
                   <TableCell>
@@ -248,7 +270,7 @@ export function CategoryManager() {
       </CardContent>
 
       {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog open={formOpen} onOpenChange={handleCloseDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -265,6 +287,7 @@ export function CategoryManager() {
                 id="name"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Roupas Femininas"
                 required
               />
             </div>
@@ -294,7 +317,12 @@ export function CategoryManager() {
                   placeholder="Nome da subcategoria"
                   value={newSubcategory}
                   onChange={e => setNewSubcategory(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addSubcategory())}
+                  onKeyPress={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addSubcategory();
+                    }
+                  }}
                 />
                 <Button type="button" onClick={addSubcategory} size="icon">
                   <Plus className="h-4 w-4" />
@@ -319,10 +347,8 @@ export function CategoryManager() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setFormOpen(false);
-                  setEditingCategory(null);
-                }}
+                onClick={handleCloseDialog}
+                disabled={loading}
               >
                 Cancelar
               </Button>
@@ -346,7 +372,9 @@ export function CategoryManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={loading}>
+              {loading ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

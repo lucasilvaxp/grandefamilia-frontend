@@ -1,16 +1,16 @@
-// Types matching MongoDB schema for Fashion Catalog
+// Types matching Turso database schema for Fashion Catalog
 
 export interface Product {
-  _id: string;
+  id: number;
   name: string;
   description: string;
   price: number;
   originalPrice?: number;
   category: string;
   subcategory?: string;
-  brand: string;
-  sizes: string[];
-  colors: Color[];
+  brand?: string;
+  sizes?: string[];
+  colors?: Color[];
   images: string[];
   stock: number;
   featured: boolean;
@@ -27,11 +27,18 @@ export interface Color {
 }
 
 export interface Category {
-  _id: string;
+  id: number;
   name: string;
   slug: string;
   subcategories: string[];
   image?: string;
+}
+
+export interface Brand {
+  id: number;
+  name: string;
+  slug: string;
+  createdAt: string;
 }
 
 export interface CartItem {

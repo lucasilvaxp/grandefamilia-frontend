@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Brand } from '@/types/admin';
+import { Brand } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,16 +61,18 @@ export function BrandManager() {
   }, []);
 
   useEffect(() => {
-    if (editingBrand) {
-      setFormData({
-        name: editingBrand.name,
-        description: editingBrand.description || '',
-        logo: editingBrand.logo || '',
-      });
-    } else {
-      resetForm();
+    if (formOpen) {
+      if (editingBrand) {
+        setFormData({
+          name: editingBrand.name,
+          description: editingBrand.description || '',
+          logo: editingBrand.logo || '',
+        });
+      } else {
+        resetForm();
+      }
     }
-  }, [editingBrand]);
+  }, [editingBrand, formOpen]);
 
   const fetchBrands = async () => {
     setLoading(true);
@@ -79,6 +81,8 @@ export function BrandManager() {
       if (response.ok) {
         const data = await response.json();
         setBrands(data);
+      } else {
+        toast.error('Erro ao carregar marcas');
       }
     } catch (error) {
       console.error('Error fetching brands:', error);
@@ -98,13 +102,15 @@ export function BrandManager() {
 
     try {
       const payload = {
-        name: formData.name,
-        description: formData.description || undefined,
-        logo: formData.logo || undefined,
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        logo: formData.logo.trim() || undefined,
       };
 
-      const url = editingBrand ? `/api/brands/${editingBrand._id}` : '/api/brands';
+      const url = editingBrand ? `/api/brands/${editingBrand.id}` : '/api/brands';
       const method = editingBrand ? 'PUT' : 'POST';
+
+      console.log('[BrandManager] Submitting:', method, url, payload);
 
       const response = await fetch(url, {
         method,
@@ -112,17 +118,21 @@ export function BrandManager() {
         body: JSON.stringify(payload),
       });
 
+      console.log('[BrandManager] Response status:', response.status);
+
       if (response.ok) {
         toast.success(editingBrand ? 'Marca atualizada!' : 'Marca criada!');
         setFormOpen(false);
         setEditingBrand(null);
-        fetchBrands();
+        resetForm();
+        await fetchBrands();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Erro ao salvar marca');
+        console.error('[BrandManager] Error response:', error);
+        toast.error(error.error || error.detail || 'Erro ao salvar marca');
       }
     } catch (error) {
-      console.error('Error saving brand:', error);
+      console.error('[BrandManager] Error saving brand:', error);
       toast.error('Erro ao salvar marca');
     } finally {
       setLoading(false);
@@ -132,24 +142,33 @@ export function BrandManager() {
   const handleDelete = async () => {
     if (!brandToDelete) return;
 
+    setLoading(true);
     try {
-      const response = await fetch(`/api/brands/${brandToDelete._id}`, {
+      const response = await fetch(`/api/brands/${brandToDelete.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         toast.success('Marca excluída com sucesso');
-        fetchBrands();
+        await fetchBrands();
       } else {
-        toast.error('Erro ao excluir marca');
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao excluir marca');
       }
     } catch (error) {
       console.error('Error deleting brand:', error);
       toast.error('Erro ao excluir marca');
     } finally {
+      setLoading(false);
       setDeleteDialogOpen(false);
       setBrandToDelete(null);
     }
+  };
+
+  const handleCloseDialog = () => {
+    setFormOpen(false);
+    setEditingBrand(null);
+    resetForm();
   };
 
   return (
@@ -186,7 +205,7 @@ export function BrandManager() {
             </TableHeader>
             <TableBody>
               {brands.map(brand => (
-                <TableRow key={brand._id}>
+                <TableRow key={brand.id}>
                   <TableCell className="font-medium">{brand.name}</TableCell>
                   <TableCell>{brand.description || '-'}</TableCell>
                   <TableCell className="text-right">
@@ -221,7 +240,7 @@ export function BrandManager() {
       </CardContent>
 
       {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog open={formOpen} onOpenChange={handleCloseDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -238,6 +257,7 @@ export function BrandManager() {
                 id="name"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Nike, Adidas"
                 required
               />
             </div>
@@ -247,6 +267,7 @@ export function BrandManager() {
                 id="description"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrição opcional da marca"
                 rows={3}
               />
             </div>
@@ -263,10 +284,8 @@ export function BrandManager() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setFormOpen(false);
-                  setEditingBrand(null);
-                }}
+                onClick={handleCloseDialog}
+                disabled={loading}
               >
                 Cancelar
               </Button>
@@ -290,7 +309,9 @@ export function BrandManager() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} disabled={loading}>
+              {loading ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
