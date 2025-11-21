@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadImage } from '@/lib/supabase';
+import { uploadImage, isSupabaseConfigured } from '@/lib/supabase';
 
 const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
 
@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
 
     const uploadedUrls: string[] = [];
 
-    // Check if Supabase is configured
-    const hasSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Check if Supabase is configured (only at runtime, not build time)
+    const hasSupabase = isSupabaseConfigured();
 
     // Process each file
     for (const file of files) {
