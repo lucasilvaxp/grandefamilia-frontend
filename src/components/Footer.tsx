@@ -1,12 +1,26 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { MapPin, Phone, Mail, Clock, Instagram, Facebook } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export function Footer() {
+  const [logo, setLogo] = useState('/logo-grande-familia.png');
   const whatsappNumber = "5593991084582";
   const whatsappLink = `https://wa.me/${whatsappNumber}`;
+
+  useEffect(() => {
+    // Fetch logo from settings
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo) {
+          setLogo(data.logo);
+        }
+      })
+      .catch(err => console.error('Error fetching logo:', err));
+  }, []);
 
   return (
     <footer className="border-t bg-muted/50">
@@ -17,10 +31,11 @@ export function Footer() {
             <div className="flex items-center space-x-2">
               <div className="relative h-8 w-8 md:h-10 md:w-10">
                 <Image
-                  src="/logo-grande-familia.png"
+                  src={logo}
                   alt="Loja A Grande Família"
                   fill
                   className="object-contain"
+                  onError={() => setLogo('/logo-grande-familia.png')}
                 />
               </div>
               <h3 className="font-bold text-base md:text-lg">Loja A Grande Família</h3>

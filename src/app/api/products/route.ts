@@ -84,8 +84,14 @@ export async function GET(request: NextRequest) {
       });
     }
     
+    // Convert price from string to number for all products
+    const formattedData = filtered.map(product => ({
+      ...product,
+      price: parseFloat(product.price),
+    }));
+    
     return NextResponse.json({
-      data: filtered,
+      data: formattedData,
       total,
       page,
       pageSize,
@@ -128,7 +134,13 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     }).returning();
 
-    return NextResponse.json(newProduct[0], { status: 201 });
+    // Convert price to number before returning
+    const formattedProduct = {
+      ...newProduct[0],
+      price: parseFloat(newProduct[0].price),
+    };
+
+    return NextResponse.json(formattedProduct, { status: 201 });
   } catch (error) {
     console.error('POST /api/products error:', error);
     return NextResponse.json(

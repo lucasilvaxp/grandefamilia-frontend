@@ -40,6 +40,7 @@ export function Header() {
                   fill
                   className="object-contain"
                   priority
+                  onError={() => setLogo('/logo-grande-familia.png')}
                 />
               </div>
             </Link>

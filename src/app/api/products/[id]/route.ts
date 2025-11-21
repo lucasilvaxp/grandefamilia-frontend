@@ -27,7 +27,13 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(product[0]);
+    // Convert price to number
+    const formattedProduct = {
+      ...product[0],
+      price: parseFloat(product[0].price),
+    };
+
+    return NextResponse.json(formattedProduct);
   } catch (error) {
     console.error('GET /api/products/[id] error:', error);
     return NextResponse.json(
@@ -78,7 +84,13 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json(updatedProduct[0]);
+    // Convert price to number
+    const formattedProduct = {
+      ...updatedProduct[0],
+      price: parseFloat(updatedProduct[0].price),
+    };
+
+    return NextResponse.json(formattedProduct);
   } catch (error) {
     console.error('PUT /api/products/[id] error:', error);
     return NextResponse.json(
