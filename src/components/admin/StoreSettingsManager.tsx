@@ -14,16 +14,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Save, Store, MessageCircle, Instagram, Facebook, Mail, MapPin } from 'lucide-react';
+import { Loader2, Save, Store, MessageCircle, Instagram, Facebook, Mail, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 export function StoreSettingsManager() {
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   
   const [formData, setFormData] = useState({
     storeName: '',
+    logo: '',
     whatsappNumber: '',
     whatsappMessage: '',
     instagram: '',
@@ -45,6 +48,7 @@ export function StoreSettingsManager() {
         setSettings(data);
         setFormData({
           storeName: data.storeName || '',
+          logo: data.logo || '',
           whatsappNumber: data.whatsappNumber || '',
           whatsappMessage: data.whatsappMessage || '',
           instagram: data.instagram || '',
@@ -59,6 +63,55 @@ export function StoreSettingsManager() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione uma imagem válida');
+      return;
+    }
+
+    // Validate file size (2MB max for logo)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('A logo deve ter no máximo 2MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('images', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const logoUrl = data.urls[0];
+        setFormData(prev => ({ ...prev, logo: logoUrl }));
+        toast.success('Logo enviada com sucesso!');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erro ao fazer upload da logo');
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Erro ao fazer upload da logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const removeLogo = () => {
+    setFormData(prev => ({ ...prev, logo: '' }));
+    toast.success('Logo removida');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +175,78 @@ export function StoreSettingsManager() {
                 placeholder="Loja A Grande Família"
               />
             </div>
+            
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="logo">Logo da Loja</Label>
+              <div className="space-y-3">
+                {formData.logo ? (
+                  <div className="relative inline-block">
+                    <div className="relative w-48 h-48 border-2 border-border rounded-lg overflow-hidden bg-muted">
+                      <Image
+                        src={formData.logo}
+                        alt="Logo da loja"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2"
+                      onClick={removeLogo}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-48 h-48 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center bg-muted/50">
+                    <div className="text-center text-muted-foreground">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Nenhuma logo</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={uploadingLogo}
+                    className="hidden"
+                  />
+                  <Label htmlFor="logo">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={uploadingLogo}
+                      asChild
+                    >
+                      <span className="cursor-pointer">
+                        {uploadingLogo ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            {formData.logo ? 'Alterar Logo' : 'Fazer Upload da Logo'}
+                          </>
+                        )}
+                      </span>
+                    </Button>
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Imagem PNG, JPG ou WEBP (máx. 2MB). Recomendado: fundo transparente, 512x512px
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="address">Endereço</Label>
               <Textarea
