@@ -2,6 +2,7 @@ export interface StoreSettings {
   _id?: string;
   type: string;
   storeName: string;
+  logo?: string;
   whatsappNumber: string;
   whatsappMessage: string;
   instagram: string;
