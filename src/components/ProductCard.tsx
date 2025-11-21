@@ -16,6 +16,11 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
+  // Safe fallbacks for optional fields
+  const firstImage = product.images?.[0] || '/placeholder-product.jpg';
+  const colors = product.colors || [];
+  const stock = product.stock ?? 0;
+
   return (
     <Card 
       className="group cursor-pointer overflow-hidden transition-all hover:shadow-xl border-gray-200 bg-white h-full flex flex-col"
@@ -24,7 +29,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
       {/* Image Section - Consistent Aspect Ratio */}
       <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
         <Image
-          src={product.images[0]}
+          src={firstImage}
           alt={product.name}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -44,7 +49,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         )}
         
         {/* Out of Stock Overlay */}
-        {product.stock === 0 && (
+        {stock === 0 && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
             <Badge variant="secondary" className="text-sm md:text-base">
               Esgotado
@@ -63,16 +68,20 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         </div>
         
         {/* Brand - Compact */}
-        <p className="text-[10px] sm:text-xs text-gray-500 mb-1.5 sm:mb-2">{product.brand}</p>
+        {product.brand && (
+          <p className="text-[10px] sm:text-xs text-gray-500 mb-1.5 sm:mb-2">{product.brand}</p>
+        )}
         
         {/* Rating - Compact */}
         {product.rating && (
           <div className="flex items-center gap-1 mb-1.5 sm:mb-2">
             <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-yellow-400 text-yellow-400" />
             <span className="text-[10px] sm:text-xs font-medium text-gray-800">{product.rating}</span>
-            <span className="text-[10px] sm:text-xs text-gray-500">
-              ({product.reviewCount})
-            </span>
+            {product.reviewCount && (
+              <span className="text-[10px] sm:text-xs text-gray-500">
+                ({product.reviewCount})
+              </span>
+            )}
           </div>
         )}
         
@@ -88,27 +97,29 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           </span>
         </div>
         
-        {/* Colors - Compact Mobile */}
-        <div className="flex items-center gap-1 flex-wrap mb-1.5 sm:mb-2">
-          {product.colors.slice(0, 4).map((color, idx) => (
-            <div
-              key={idx}
-              className="h-3 w-3 sm:h-4 sm:w-4 rounded-full border-2 border-gray-300"
-              style={{ backgroundColor: color.hex }}
-              title={color.name}
-            />
-          ))}
-          {product.colors.length > 4 && (
-            <span className="text-[10px] sm:text-xs text-gray-500">
-              +{product.colors.length - 4}
-            </span>
-          )}
-        </div>
+        {/* Colors - Compact Mobile - Only show if colors exist */}
+        {colors.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap mb-1.5 sm:mb-2">
+            {colors.slice(0, 4).map((color, idx) => (
+              <div
+                key={idx}
+                className="h-3 w-3 sm:h-4 sm:w-4 rounded-full border-2 border-gray-300"
+                style={{ backgroundColor: color.hex }}
+                title={color.name}
+              />
+            ))}
+            {colors.length > 4 && (
+              <span className="text-[10px] sm:text-xs text-gray-500">
+                +{colors.length - 4}
+              </span>
+            )}
+          </div>
+        )}
         
         {/* Stock Info - Compact Mobile */}
         <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-gray-600 mt-auto">
           <ShoppingCart className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
-          <span className="truncate">{product.stock} em estoque</span>
+          <span className="truncate">{stock} em estoque</span>
         </div>
       </CardContent>
     </Card>
