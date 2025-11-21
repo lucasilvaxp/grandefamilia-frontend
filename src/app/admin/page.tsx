@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [logo, setLogo] = useState('/logo-grande-familia.png');
   const router = useRouter();
   const { isAuthenticated, logout, isLoading: authLoading } = useAuth();
 
@@ -59,9 +60,10 @@ export default function AdminPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
+      const [productsRes, categoriesRes, settingsRes] = await Promise.all([
         fetch('/api/products?pageSize=100&_t=' + Date.now()),
         fetch('/api/categories'),
+        fetch('/api/settings'),
       ]);
 
       if (productsRes.ok) {
@@ -72,6 +74,13 @@ export default function AdminPage() {
       if (categoriesRes.ok) {
         const categoriesData = await categoriesRes.json();
         setCategories(categoriesData);
+      }
+
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        if (settingsData.logo) {
+          setLogo(settingsData.logo);
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -182,7 +191,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-3 md:gap-4">
               <div className="relative h-12 w-12 md:h-16 md:w-16 flex-shrink-0">
                 <Image
-                  src="/logo-grande-familia.png"
+                  src={logo}
                   alt="Loja A Grande Família"
                   fill
                   className="object-contain"
