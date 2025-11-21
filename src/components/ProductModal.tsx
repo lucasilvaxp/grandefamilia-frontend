@@ -42,6 +42,7 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
     : 0;
 
   const handleAddToCart = () => {
+    // Only validate if options exist
     if (sizes.length > 0 && !selectedSize) {
       toast.error('Por favor, selecione um tamanho');
       return;
@@ -51,7 +52,7 @@ export function ProductModal({ product, open, onClose }: ProductModalProps) {
       return;
     }
 
-    addToCart(product, quantity, selectedSize, selectedColor!);
+    addToCart(product, quantity, selectedSize || undefined, selectedColor || undefined);
     toast.success('Produto adicionado ao carrinho!');
     onClose();
   };
