@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart as ShoppingCartIcon, Menu, X } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
@@ -11,7 +11,20 @@ import Image from 'next/image';
 export function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logo, setLogo] = useState('/logo-grande-familia.png');
   const { itemCount } = useCart();
+
+  useEffect(() => {
+    // Fetch logo from settings
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.logo) {
+          setLogo(data.logo);
+        }
+      })
+      .catch(err => console.error('Error fetching logo:', err));
+  }, []);
 
   return (
     <>
@@ -22,7 +35,7 @@ export function Header() {
             <Link href="/" className="flex items-center group flex-shrink-0">
               <div className="relative h-10 w-10 md:h-12 md:w-12 transition-transform group-hover:scale-110">
                 <Image
-                  src="/logo-grande-familia.png"
+                  src={logo}
                   alt="Loja A Grande Família"
                   fill
                   className="object-contain"
