@@ -31,6 +31,7 @@ export async function GET(
     const formattedProduct = {
       ...product[0],
       price: parseFloat(product[0].price),
+      originalPrice: product[0].originalPrice ? parseFloat(product[0].originalPrice) : null,
     };
 
     return NextResponse.json(formattedProduct);
@@ -59,7 +60,7 @@ export async function PUT(
       );
     }
 
-    const { name, description, price, images, category, subcategory, brand, stock, featured } = body;
+    const { name, description, price, images, category, subcategory, brand, stock, featured, sizes, colors, tags, originalPrice } = body;
 
     const updatedProduct = await db.update(products)
       .set({
@@ -72,6 +73,10 @@ export async function PUT(
         brand: brand ? brand.trim() : undefined,
         stock: stock !== undefined ? stock : undefined,
         featured: featured !== undefined ? featured : undefined,
+        sizes: sizes !== undefined ? sizes : undefined,
+        colors: colors !== undefined ? colors : undefined,
+        tags: tags !== undefined ? tags : undefined,
+        originalPrice: originalPrice !== undefined ? (originalPrice ? originalPrice.toString() : null) : undefined,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(products.id, parseInt(id)))
@@ -88,6 +93,7 @@ export async function PUT(
     const formattedProduct = {
       ...updatedProduct[0],
       price: parseFloat(updatedProduct[0].price),
+      originalPrice: updatedProduct[0].originalPrice ? parseFloat(updatedProduct[0].originalPrice) : null,
     };
 
     return NextResponse.json(formattedProduct);
